@@ -29,7 +29,7 @@
                 </span>
             </div>
             <div class="col pt-2 d-flex justify-content-between h-100">
-                <input type="file" id="upload"  class="btn btn-light" />
+                <input type="file" id="upload" class="btn btn-light" />
                 <input type="button" id="save" value="Save" class="btn btn-light" />
             </div>
         </div>
@@ -65,9 +65,9 @@
         // Show a popup before page refresh 
         window.onbeforeunload = () => "";
 
-        const names = new Set();
+        let names = new Set();
         let alias = new Map();
-        const filters = new Set();
+        let filters = new Set();
 
         document.querySelector("#save").addEventListener("click", () => {
             const json = JSON.stringify({ Alias: alias, Filters: Array.from(filters) }, null, 2);
@@ -84,6 +84,14 @@
         });
 
         document.querySelector("#upload").addEventListener("change", (event) => {
+            names = new Set();
+            alias = new Map();
+            filters = new Set();
+
+            clearHtml("#names");
+            clearHtml("#alias");
+            clearHtml("#filters");
+
             const file = event.target.files[0];
             if (file) {
                 const fileReader = new FileReader();
@@ -97,10 +105,12 @@
 
                     for (const cell in firstSheet) {
                         if (cell.startsWith('A')) {
-                            const value = firstSheet[cell].v;
-                            names.add(value);
+                            const valueA = firstSheet[cell].v;
+                            names.add(firstSheet[cell].v);
                         }
                     }
+
+                    updateAlias();
 
                     Array.from(names).forEach((value, index) => {
                         const words = value.split(" ");
@@ -120,9 +130,9 @@
                         });
                         document.querySelector("#names").appendChild(div);
 
-                        const spanIndex = document.createElement("span");
-                        spanIndex.textContent = `${index + 1}`;
-                        document.querySelector("#indexes").appendChild(spanIndex);
+                        const span = document.createElement("span");
+                        span.textContent = `${index + 1}`;
+                        document.querySelector("#indexes").appendChild(span);
                     });
                 };
 
@@ -131,10 +141,10 @@
         });
 
         function addFilter(element) {
-            const text = element.textContent.replace(" ", "");
+            const text = element.textContent;
 
             Array.from(document.querySelectorAll("#names span")).forEach(s => {
-                if (s.textContent.includes(text)) {
+                if (s.textContent.toLowerCase() == text.toLowerCase()) {
                     s.classList.toggle("text-decoration-line-through");
                 }
             })
@@ -144,7 +154,7 @@
 
                 if (!Array.from(document.querySelectorAll("#filters span")).some(s => s.textContent.includes(text))) {
                     const clone = element.cloneNode(true);
-                    clone.textContent = clone.textContent.replace(" ", "");
+                    clone.textContent = clone.textContent;
                     clone.classList.remove(...element.classList);
                     clone.classList.add("p-1");
                     clone.addEventListener("click", () => {
@@ -186,7 +196,7 @@
                 return groups;
             }, {});
 
-            Array.from(document.querySelectorAll("#alias div")).forEach(div => document.querySelector("#alias").removeChild(div));
+            clearHtml("#alias");
 
             Object.keys(alias).filter(s => s != "").forEach(key => {
                 const value = alias[key];
@@ -195,6 +205,16 @@
                 div.innerHTML = `<strong>${key}</strong> - ${value.join(", ")}`;
                 document.querySelector("#alias").appendChild(div);
             });
+        }
+
+        function clearHtml(parentTag) {
+            const parentElement = document.querySelector(parentTag);
+
+            if (parentElement) {
+                const childElements = parentElement.querySelectorAll("*");
+
+                childElements.forEach(child => child.remove());
+            }
         }
     </script>
 </body>
