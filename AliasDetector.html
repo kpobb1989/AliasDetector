@@ -176,7 +176,7 @@
             } else {
                 filters.delete(text);
 
-                element = Array.from(document.querySelectorAll("#filters span")).find(s => s.textContent.includes(text));
+                element = Array.from(document.querySelectorAll("#filters span")).find(s => s.textContent.toLowerCase() == text.toLowerCase());
 
                 if (element) {
                     document.querySelector("#filters").removeChild(element);
@@ -196,6 +196,14 @@
                 groups[key].push(item);
                 return groups;
             }, {});
+
+            // sorting
+            alias = Object.keys(alias)
+                .sort()
+                .reduce((sortedGroups, key) => {
+                    sortedGroups[key] = alias[key];
+                    return sortedGroups;
+                }, {});
 
             clearHtml("#alias");
 
