@@ -107,7 +107,10 @@
                     for (const cell in firstSheet) {
                         if (cell.startsWith('A')) {
                             const valueA = firstSheet[cell].v;
-                            names.add(firstSheet[cell].v);
+
+                            if (/[^0-9.-]/.test(valueA)) {
+                                names.add(valueA);
+                            }
                         }
                     }
 
