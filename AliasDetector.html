@@ -65,11 +65,36 @@
         // Show a popup before page refresh 
         window.onbeforeunload = () => "";
 
+        const namesSelector = document.querySelector("#names");
+        const indexesSelector = document.querySelector("#indexes");
+        const filtersSelector = document.querySelector("#filters");
+        const saveBtnSelector = document.querySelector("#save");
+        const uploadBtnSelector = document.querySelector("#upload");
+
         let names = new Set();
         let alias = new Map();
         let filters = new Set();
 
-        document.querySelector("#save").addEventListener("click", () => {
+        namesSelector.addEventListener("click", (event) => {
+            addFilter(event.target);
+            updateAlias();
+        });
+
+        filtersSelector.addEventListener("click", (event) => {
+            const text = event.target.textContent;
+            filters.delete(text);
+            filtersSelector.removeChild(event.target);
+
+            Array.from(namesSelector.querySelectorAll("*")).forEach(s => {
+                if (s.textContent.toLowerCase() == text.toLowerCase()) {
+                    s.classList.toggle("text-decoration-line-through");
+                }
+            })
+
+            updateAlias();
+        });
+
+        saveBtnSelector.addEventListener("click", () => {
             const json = JSON.stringify({ Alias: alias, Filters: Array.from(filters) }, null, 2);
 
             const blob = new Blob([json], { type: "application/json" });
@@ -83,7 +108,7 @@
             URL.revokeObjectURL(link.href);
         });
 
-        document.querySelector("#upload").addEventListener("change", (event) => {
+        uploadBtnSelector.addEventListener("change", (event) => {
             names = new Set();
             alias = new Map();
             filters = new Set();
@@ -116,6 +141,7 @@
 
                     updateAlias();
 
+                    
                     Array.from(names).forEach((value, index) => {
                         const words = value.split(" ");
 
@@ -126,17 +152,14 @@
                             span.setAttribute("role", "button");
                             span.classList.add("p-1");
                             span.textContent = word;
-                            span.addEventListener("click", () => {
-                                addFilter(span);
-                                updateAlias();
-                            });
                             div.appendChild(span);
                         });
-                        document.querySelector("#names").appendChild(div);
+
+                        namesSelector.appendChild(div);
 
                         const span = document.createElement("span");
                         span.textContent = `${index + 1}`;
-                        document.querySelector("#indexes").appendChild(span);
+                        indexesSelector.appendChild(span);
                     });
                 };
 
@@ -147,44 +170,25 @@
         function addFilter(element) {
             const text = element.textContent;
 
-            Array.from(document.querySelectorAll("#names span")).forEach(s => {
-                if (s.textContent.toLowerCase() == text.toLowerCase()) {
-                    s.classList.toggle("text-decoration-line-through");
-                }
-            })
+            Array.from(namesSelector.querySelectorAll("*"))
+                .filter(s => s.textContent.toLowerCase() == text.toLowerCase())
+                .forEach(s => s.classList.toggle("text-decoration-line-through"));
 
             if (!filters.has(text)) {
                 filters.add(text);
-
-                if (!Array.from(document.querySelectorAll("#filters span")).some(s => s.textContent.includes(text))) {
-                    const clone = element.cloneNode(true);
-                    clone.textContent = clone.textContent;
-                    clone.classList.remove(...element.classList);
-                    clone.classList.add("p-1");
-                    clone.addEventListener("click", () => {
-                        filters.delete(text);
-                        document.querySelector("#filters").removeChild(clone);
-
-                        Array.from(document.querySelectorAll("#names span")).forEach(s => {
-                            if (s.textContent.includes(text)) {
-                                s.classList.toggle("text-decoration-line-through");
-                            }
-                        })
-
-                        updateAlias();
-                    });
-                    document.querySelector("#filters").appendChild(clone);
-                }
-
             } else {
                 filters.delete(text);
-
-                element = Array.from(document.querySelectorAll("#filters span")).find(s => s.textContent.toLowerCase() == text.toLowerCase());
-
-                if (element) {
-                    document.querySelector("#filters").removeChild(element);
-                }
             }
+
+            // Re-render
+            clearHtml("#filters");
+            Array.from(filters).sort().forEach(filter => {
+                const span = document.createElement("span");
+                span.setAttribute("role", "button");
+                span.textContent = filter
+                span.classList.add("p-1");
+                filtersSelector.appendChild(span);
+            });
         }
 
         function updateAlias() {
@@ -200,17 +204,9 @@
                 return groups;
             }, {});
 
-            // sorting
-            alias = Object.keys(alias)
-                .sort()
-                .reduce((sortedGroups, key) => {
-                    sortedGroups[key] = alias[key];
-                    return sortedGroups;
-                }, {});
-
+            // Re-render
             clearHtml("#alias");
-
-            Object.keys(alias).filter(s => s != "").forEach(key => {
+            Object.keys(alias).filter(s => s != "").sort().forEach(key => {
                 const value = alias[key];
                 const div = document.createElement("div");
                 div.classList.add("p-1");
