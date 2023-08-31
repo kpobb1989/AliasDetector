@@ -76,7 +76,7 @@
         let filters = new Set();
 
         namesSelector.addEventListener("click", (event) => {
-            addFilter(event.target);
+            updateFilters(event.target.textContent);
             updateAlias();
         });
 
@@ -141,7 +141,7 @@
 
                     updateAlias();
 
-                    
+
                     Array.from(names).forEach((value, index) => {
                         const words = value.split(" ");
 
@@ -167,9 +167,7 @@
             }
         });
 
-        function addFilter(element) {
-            const text = element.textContent;
-
+        function updateFilters(text) {
             Array.from(namesSelector.querySelectorAll("*"))
                 .filter(s => s.textContent.toLowerCase() == text.toLowerCase())
                 .forEach(s => s.classList.toggle("text-decoration-line-through"));
