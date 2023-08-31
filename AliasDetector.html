@@ -1,0 +1,202 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Alias Detector</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.1/dist/css/bootstrap.min.css" rel="stylesheet"
+        integrity="sha384-4bw+/aepP/YC94hEpVNVgiZdgIC5+VKNBQNGCHeKRQN+PtmoHDEXuppvnDJzQIu9" crossorigin="anonymous">
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.1/dist/js/bootstrap.bundle.min.js"
+        integrity="sha384-HwwvtgBNo3bZJJLYd8oVXjrBZt8cqVSpeBNS5n7C8IVInixGAoxmnlMuBnhbgrkm"
+        crossorigin="anonymous"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.mini.min.js"></script>
+    <style>
+        html,
+        body {
+            height: calc(100% - 67px);
+        }
+    </style>
+</head>
+
+<body>
+    <div class="container-fluid h-100">
+        <div class="row p-2">
+            <div class="col-3 d-flex justify-content-between h-100">
+                <span class="d-flex align-items-end">
+                    <h2 class="text-primary">Alias Detector</h2>
+                    <h6 class="mt-2 m-0 p-0 text-primary opacity-25">bro edition</h6>
+                </span>
+            </div>
+            <div class="col pt-2 d-flex justify-content-between h-100">
+                <input type="file" id="upload"  class="btn btn-light" />
+                <input type="button" id="save" value="Save" class="btn btn-light" />
+            </div>
+        </div>
+        <div class="row p-3 h-100">
+            <div class="col-1">
+                <p class="text-center fw-bolder">#</p>
+                <div class="row p-2 h-100">
+                    <div id="indexes" class="col text-center d-flex flex-column align-items-center h-100"></div>
+                </div>
+            </div>
+            <div class="col-4">
+                <p class="text-center fw-bolder">Names</p>
+                <div class="row p-2 h-100">
+                    <div id="names" class="col border border-secondary rounded shadow h-100"></div>
+                </div>
+            </div>
+            <div class="col-5">
+                <p class="text-center fw-bolder">Alias</p>
+                <div class="row p-2 h-100">
+                    <div id="alias" class="col border border-secondary rounded shadow d-flex flex-column h-100"></div>
+                </div>
+            </div>
+            <div class="col-2">
+                <p class="text-center fw-bolder">Filters</p>
+                <div class="row p-2 h-100">
+                    <div id="filters" class="col border border-secondary rounded shadow d-flex flex-column h-100"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Show a popup before page refresh 
+        window.onbeforeunload = () => "";
+
+        const names = new Set();
+        let alias = new Map();
+        const filters = new Set();
+
+        document.querySelector("#save").addEventListener("click", () => {
+            const json = JSON.stringify({ Alias: alias, Filters: Array.from(filters) }, null, 2);
+
+            const blob = new Blob([json], { type: "application/json" });
+
+            const link = document.createElement("a");
+            link.href = URL.createObjectURL(blob);
+            link.download = "data.json";
+
+            link.click();
+
+            URL.revokeObjectURL(link.href);
+        });
+
+        document.querySelector("#upload").addEventListener("change", (event) => {
+            const file = event.target.files[0];
+            if (file) {
+                const fileReader = new FileReader();
+
+                fileReader.onload = function (event) {
+                    const data = event.target.result;
+                    const workbook = XLSX.read(data, { type: 'binary' });
+
+                    const firstSheetName = workbook.SheetNames[0];
+                    const firstSheet = workbook.Sheets[firstSheetName];
+
+                    for (const cell in firstSheet) {
+                        if (cell.startsWith('A')) {
+                            const value = firstSheet[cell].v;
+                            names.add(value);
+                        }
+                    }
+
+                    Array.from(names).forEach((value, index) => {
+                        const words = value.split(" ");
+
+                        var div = document.createElement("div");
+
+                        words.forEach(word => {
+                            const span = document.createElement('span');
+                            span.setAttribute("role", "button");
+                            span.classList.add("p-1");
+                            span.textContent = word;
+                            span.addEventListener("click", () => {
+                                addFilter(span);
+                                updateAlias();
+                            });
+                            div.appendChild(span);
+                        });
+                        document.querySelector("#names").appendChild(div);
+
+                        const spanIndex = document.createElement("span");
+                        spanIndex.textContent = `${index + 1})`;
+                        document.querySelector("#indexes").appendChild(spanIndex);
+                    });
+                };
+
+                fileReader.readAsBinaryString(file);
+            }
+        });
+
+        function addFilter(element) {
+            const text = element.textContent.replace(" ", "");
+
+            Array.from(document.querySelectorAll("#names span")).forEach(s => {
+                if (s.textContent.includes(text)) {
+                    s.classList.toggle("text-decoration-line-through");
+                }
+            })
+
+            if (!filters.has(text)) {
+                filters.add(text);
+
+                if (!Array.from(document.querySelectorAll("#filters span")).some(s => s.textContent.includes(text))) {
+                    const clone = element.cloneNode(true);
+                    clone.textContent = clone.textContent.replace(" ", "");
+                    clone.classList.remove(...element.classList);
+                    clone.classList.add("p-1");
+                    clone.addEventListener("click", () => {
+                        filters.delete(text);
+                        document.querySelector("#filters").removeChild(clone);
+
+                        Array.from(document.querySelectorAll("#names span")).forEach(s => {
+                            if (s.textContent.includes(text)) {
+                                s.classList.toggle("text-decoration-line-through");
+                            }
+                        })
+
+                        updateAlias();
+                    });
+                    document.querySelector("#filters").appendChild(clone);
+                }
+
+            } else {
+                filters.delete(text);
+
+                element = Array.from(document.querySelectorAll("#filters span")).find(s => s.textContent.includes(text));
+
+                if (element) {
+                    document.querySelector("#filters").removeChild(element);
+                }
+            }
+        }
+
+        function updateAlias() {
+            alias = Array.from(names).reduce((groups, item) => {
+                let key = item.toUpperCase();
+
+                key = key.split(" ").filter(s => !Array.from(filters).map(s => s.toUpperCase()).includes(s)).join(" ");
+
+                if (!groups[key]) {
+                    groups[key] = [];
+                }
+                groups[key].push(item);
+                return groups;
+            }, {});
+
+            Array.from(document.querySelectorAll("#alias div")).forEach(div => document.querySelector("#alias").removeChild(div));
+
+            Object.keys(alias).filter(s => s != "").forEach(key => {
+                const value = alias[key];
+                const div = document.createElement("div");
+                div.classList.add("p-1");
+                div.innerHTML = `<strong>${key}</strong> - ${value.join(", ")}`;
+                document.querySelector("#alias").appendChild(div);
+            });
+        }
+    </script>
+</body>
+
+</html>
